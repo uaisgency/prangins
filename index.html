@@ -76,8 +76,41 @@ ul { list-style: none; }
   margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
 }
+
+/* ===== LANGUAGE SWITCHER ===== */
+.util-bar__translate {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.lang-btn {
+  font-family: var(--font);
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.50);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.55rem;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+  text-transform: uppercase;
+}
+.lang-btn:hover { color: rgba(255,255,255,0.90); background: rgba(255,255,255,0.10); }
+.lang-btn.active { color: #ffffff; background: rgba(255,255,255,0.15); }
+.lang-divider { color: rgba(255,255,255,0.18); font-size: 0.65rem; user-select: none; }
+/* Hide Google Translate banner bar */
+.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; }
+/* Hide Google widget itself — we drive it manually */
+#google_translate_element { display: none !important; }
 .util-bar__links {
   display: flex;
   align-items: center;
@@ -1495,6 +1528,8 @@ ul { list-style: none; }
   .util-bar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   .util-bar::-webkit-scrollbar { display: none; }
   .util-bar__inner { justify-content: flex-start; min-width: max-content; }
+  .lang-divider { display: none; }
+  .lang-btn { padding: 0 0.4rem; font-size: 0.65rem; }
   .util-link { padding: 0 0.7rem; font-size: 0.68rem; white-space: nowrap; }
 }
 </style>
@@ -1506,6 +1541,16 @@ ul { list-style: none; }
 <!-- ===== UTILITY BAR ===== -->
 <div class="util-bar" role="navigation" aria-label="Navigation rapide">
   <div class="util-bar__inner">
+    <div class="util-bar__translate" aria-label="Changer de langue">
+      <button class="lang-btn active" onclick="switchLang('fr')" data-lang="fr">FR</button>
+      <span class="lang-divider">·</span>
+      <button class="lang-btn" onclick="switchLang('en')" data-lang="en">EN</button>
+      <span class="lang-divider">·</span>
+      <button class="lang-btn" onclick="switchLang('de')" data-lang="de">DE</button>
+      <span class="lang-divider">·</span>
+      <button class="lang-btn" onclick="switchLang('it')" data-lang="it">IT</button>
+    </div>
+    <div id="google_translate_element" style="display:none;"></div>
     <div class="util-bar__links">
       <button class="util-link" onclick="showDemarches()">DÉMARCHES</button>
       <a href="https://www.prangins.ch/plan" class="util-link">PLAN</a>
@@ -2431,5 +2476,55 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 })();
 </script>
+
+<!-- ===== GOOGLE TRANSLATE ===== -->
+<script type="text/javascript">
+// Initialise hidden widget
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr',
+    includedLanguages: 'en,de,it,fr',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+    autoDisplay: false,
+    gaTrack: false
+  }, 'google_translate_element');
+}
+
+// Trigger translation via the hidden combo select Google injects
+function switchLang(lang) {
+  // Update active button state
+  document.querySelectorAll('.lang-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  if (lang === 'fr') {
+    // Restore original — click the "Show original" link Google injects, or reload
+    var restoreBar = document.querySelector('.goog-te-banner-frame');
+    if (restoreBar) {
+      var doc = restoreBar.contentDocument || restoreBar.contentWindow.document;
+      var restoreBtn = doc.querySelector('[id=":1.restore"]') || doc.querySelector('a[onclick*="restore"]');
+      if (restoreBtn) { restoreBtn.click(); return; }
+    }
+    // Fallback: reload without translate cookie
+    var url = window.location.href.replace(/#googtrans\([^)]*\)/, '');
+    window.location.href = url;
+    return;
+  }
+
+  // Find the Google Translate select element and change it
+  var trySwitch = function() {
+    var sel = document.querySelector('.goog-te-combo');
+    if (sel) {
+      sel.value = lang;
+      sel.dispatchEvent(new Event('change'));
+    } else {
+      // Widget not ready yet — retry
+      setTimeout(trySwitch, 300);
+    }
+  };
+  trySwitch();
+}
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
